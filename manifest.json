@@ -9,7 +9,6 @@
       "js": ["scripts/content-script.js"]
     }
   ],
-  "permissions" : ["tabs", "storage", "activeTab"],
   "browser_specific_settings": {
   "gecko": {
     "id": "powerSBG@simo.ng"
