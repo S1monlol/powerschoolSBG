@@ -12,8 +12,7 @@
   "permissions" : ["tabs", "storage", "activeTab"],
   "browser_specific_settings": {
   "gecko": {
-    "update_url": "https://power.simo.ng/updates.json",
-    "id": "power@simo.ng"
+    "id": "powerSBG@simo.ng"
   }
 }
 
