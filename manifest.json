@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "PowerschoolSBG",
+  "version": "2.0.0",
+  "description": "A simple extension that converts your powerschool's SBG grades to a typical GPA ",
+  "content_scripts": [
+    {
+      "matches": ["https://*.powerschool.com/*"],
+      "js": ["scripts/content-script.js"]
+    }
+  ],
+  "permissions" : ["tabs", "storage", "activeTab"],
+  "browser_specific_settings": {
+  "gecko": {
+    "update_url": "https://power.simo.ng/updates.json",
+    "id": "power@simo.ng"
+  }
+}
+
+
+}
