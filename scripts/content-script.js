@@ -1,26 +1,136 @@
-const observer = new MutationObserver((mutations) => {
+let toggle = false;
+let gradeElementBackups = [];
+let classesArray = [];
+
+const observer = new MutationObserver((mutations, observer) => {
   if (mutations.length > 100) {
+    let currectClasses = document.querySelectorAll(
+      "#portal-standard-container_Current > div"
+    );
+
+    let completedClasses = document.querySelectorAll(
+      "#portal-standard-container_Complete > div"
+    );
+    // convert and combine the array from node lists
+    classesArray = Array.from(currectClasses).concat(
+      Array.from(completedClasses)
+    );
+    addEditButton();
     main();
+
+    observer.disconnect();
   }
 }).observe(document.getElementsByClassName("box-round")[0], {
   childList: true,
   subtree: true,
 });
 
+function editMode(t) {
+  let editButton = document.getElementById("editMode");
+
+  if (!t) {
+    editButton.innerText = "Normal Mode";
+
+    classesArray.forEach((classElement) => {
+      if (!classElement) return;
+
+      gradesElements = classElement.querySelector("span > table > tbody > tr");
+
+      if (gradesElements == null) return;
+
+      // remove first array element
+      gradesElements = Array.from(gradesElements.children);
+
+      gradesElements = gradesElements.filter(
+        (gradeElement) =>
+          !gradeElement.innerText.includes("--") &&
+          !gradeElement.innerText.includes("OPS") &&
+          !gradeElement.innerText.includes("No standard grade") &&
+          !gradeElement.innerText.trim().length == 0
+      );
+
+      if (gradesElements.length == 0) return;
+
+      gradesElements.forEach((element) => {
+        // remove all (x) from the text
+        element.textContent = element.textContent.replace(/\s\(.*\)/g, "");
+        element.textContent = element.textContent.replace(
+          "No standard grade entered.",
+          ""
+        );
+
+        // remove (x) from the text
+        element.innerText = element.innerText.replace(/\s\(.*\)/g, "");
+
+        gradeElementBackups.push({
+          element: element,
+          id: element.id,
+        });
+
+        element.contentEditable = true;
+
+        // remove all event listeners
+        element.replaceWith(element.cloneNode(true));
+      });
+    });
+    toggle = !toggle;
+
+    console.log(gradeElementBackups);
+  } else {
+    editButton.innerText = "Edit Mode";
+
+    gradeElementBackups.forEach((element) => {
+      // find the element in the array with the same id
+      let elementToEdit = document.getElementById(element.id);
+
+      element.element.contentEditable = false;
+
+      // set the innerText to the textContent of the cloned element
+      element.element.innerText = elementToEdit.textContent;
+
+      // replace the cloned element with the original element
+      elementToEdit.replaceWith(element.element);
+
+      // remove the backup element
+      gradeElementBackups = gradeElementBackups.filter(
+        (element) => element.id !== element.id
+      );
+    });
+
+    main();
+
+    toggle = !toggle;
+  }
+}
+
+// make all elements that have grades editable by cloning the elemnt, then setting "element.contentEditable = true;", and when edit button is toggle off, make them read only, and recalculate the average using main().
+function addEditButton() {
+  // check to see if the edit button already exists
+  if (!document.querySelector("#editMode")) {
+    let buttonsDiv = document.querySelector(
+      "#sample-ctrl > div.box-round > form > div.button-row.screenonly.ng-scope"
+    );
+
+    let button = document.createElement("button");
+
+    button.type = "button";
+    button.className = "ng-binding";
+
+    button.id = "editMode";
+
+    // Set the button text
+    button.innerText = "Edit Mode";
+
+    button.onclick = function () {
+      editMode(toggle);
+    };
+
+    buttonsDiv.appendChild(button);
+  }
+}
+
 function main() {
   let grades = [];
-
-  let currectClasses = document.querySelectorAll(
-    "#portal-standard-container_Current > div"
-  );
-
-  let completedClasses = document.querySelectorAll(
-    "#portal-standard-container_Complete > div"
-  );
-  // convert and combine the array from node lists
-  let classesArray = Array.from(currectClasses).concat(
-    Array.from(completedClasses)
-  );
 
   classesArray.forEach((classElement) => {
     if (!classElement) return;
@@ -38,18 +148,42 @@ function main() {
 
     gradesElements = gradesElements.filter(
       (gradeElement) =>
-        gradeElement.innerText.includes("View standard grade") &&
-        !gradeElement.innerText.includes("--")
+        !gradeElement.innerText.includes("--") &&
+        !gradeElement.innerText.includes("OPS") &&
+        !gradeElement.innerText.trim().length == 0
     );
 
     if (gradesElements.length == 0) return;
 
     gradesElements.forEach((gradeElement) => {
-      let grade = gradeElement.querySelector("span").innerText;
+      console.log(gradeElement);
 
-      grade = grade.replace(/[^\d.-]/g, "").slice(0, -1);
+      // replace anything that isnt a number or a period with nothing
+      gradeElement.innerText = gradeElement.innerText.replace(/[^\d.-]/g, "");
+
+      const periodCount = gradeElement.innerText.split(".").length - 1;
+
+      // Check if there are more than one periods
+      if (periodCount > 1) {
+        // Find the last period's index
+        const lastPeriodIndex = gradeElement.innerText.lastIndexOf(".");
+
+        gradeElement.innerText =
+          gradeElement.innerText.substring(0, lastPeriodIndex) +
+          gradeElement.innerText.substring(lastPeriodIndex + 1);
+      }
+
+      if (isNaN(Number(gradeElement.innerText))) {
+        return;
+      }
+
+      let grade = gradeElement.innerText;
+
+      // grade = grade.replace(/[^\d.-]/g, "").slice(0, -1);
 
       let sbgGrade;
+
+      console.log(grade, Number(grade));
 
       if (name.includes("AP")) {
         sbgGrade = apGPA(Number(grade));
@@ -62,7 +196,7 @@ function main() {
       // round to hundreths
       sbgGrade = Math.round(sbgGrade * 100) / 100;
 
-      gradeElement.querySelector("span").innerText = `${grade} (${sbgGrade})`;
+      gradeElement.innerText = `${grade} (${sbgGrade})`;
 
       if (gradeElement.id.includes("F1")) grades.push(sbgGrade);
     });
@@ -74,19 +208,24 @@ function main() {
 
   avg = Math.round(avg * 100) / 100;
 
+  // check if avgElement already exists
+  if (document.querySelector("#avgElement")) {
+    document.querySelector("#avgElement").remove();
+  }
   let avgElement = document.createElement("h3");
 
   avgElement.innerText = `Average GPA: ${avg}`;
 
+  avgElement.id = "avgElement";
+
   console.log(avg);
 
   document
-				.querySelector("#portal-standard-container_Current")
-				.insertBefore(
-				  avgElement,
-					document.querySelector("#portal-standard-container_Current")
-						.children[1]
-				);
+    .querySelector("#portal-standard-container_Current")
+    .insertBefore(
+      avgElement,
+      document.querySelector("#portal-standard-container_Current").children[1]
+    );
 }
 
 /** Based on the following piecewise function : 
